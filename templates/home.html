@@ -10,7 +10,13 @@
 <section style="text-align: center;">
     <h1 style="align-content: center;">Home Page</h1>
 </section>
-<h2>hello {{name}}</h2>
+<h2> list of results </h2>
+
+{% for item in results  %}
+    <h3> Id :  {{ item.id}} </h3>
+    <h3> Name : {{ item.name }} </h3>
+    <h3> location : {{ item.location }} </h3>
+{% endfor %}
 {% endif %}
 
 {% endblock content %}

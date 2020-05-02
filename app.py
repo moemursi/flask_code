@@ -1,8 +1,30 @@
-from flask import Flask,jsonify,request,url_for, redirect ,session,render_template
+from flask import Flask,jsonify,request,url_for, redirect ,session,render_template,g
+import sqlite3
+
 
 app = Flask(__name__)
 app.config['DEBUG'] = True
 app.config['SECRET_KEY'] = 'verysecretkey'
+
+
+#connect to db
+def connect_db():
+    sql = sqlite3.connect('/Users/m.e/Desktop/packt/flask_study/data.db')
+    sql.row_factory = sqlite3.Row  #return dictionary instead of tuples
+    return sql
+
+#call db
+def get_db():
+    if not hasattr(g, 'sqlite3'):
+        g.sqlite3_db = connect_db()
+    return g.sqlite3_db
+
+@app.teardown_appcontext
+def close_db(error):
+    if hasattr(g, 'sqlite3_db'):
+        g.sqlite3_db.close()
+
+
 
 
 @app.route('/')
@@ -15,7 +37,11 @@ def index():
 def home(name):
     session['name'] = name
     # return "hello {}".format(name)
-    return render_template('home.html',name=name,display=True)
+    db = get_db()
+    cur = db.execute('select id,name,location from users')
+    results = cur.fetchall()
+
+    return render_template('home.html',name=name,display=True,results=results)
 
 @app.route('/json')
 def json():
@@ -49,9 +75,13 @@ def theform():
         return render_template('form.html')
     else:
         name = request.form['name']
-        # location = request.form['location']
+        location = request.form['location']
+        db = get_db()
+        db.execute('insert into users(name,location) values (? ,?)',[name,location])
+        db.commit()
+        return redirect(url_for('results'))
         # return ' Hello {} . You are from {} , submitted successfully'.format(name,location)
-        return redirect(url_for('home',name=name))
+        # return redirect(url_for('home',name=name,location=location))
 
 
 @app.route('/process',methods=['POST'])
@@ -82,6 +112,13 @@ def processjson():
 def include():
     return render_template('include.html')
 
+
+@app.route('/results')
+def results():
+    db = get_db()
+    cur = db.execute('select id,name,location from users')
+    results = cur.fetchall()
+    return "<h1> The Id is {}  The name {}  The Lcoation {} </h1>".format(results[0]['id'],results[0]['name'],results[0]['location'])
 
 if __name__ == "__main__":
     app.run(debug=True)
